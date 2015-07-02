@@ -24,6 +24,7 @@ from ..models import (
     Tasks,
     TicketLabels,
     TicketPriorities,
+    TicketStatuses,
     Tickets,
     )
 
@@ -51,18 +52,19 @@ def main(argv=sys.argv):
 
     user = Users.add(
         #session = DBSession,
-        unique = '1234',
-        first = 'test',
-        last = 'user',
-        email = 'test_user@example.com',
-        pass_salt = '',
-        pass_hash = '',
+        unique = u'1234',
+        first = u'test',
+        last = u'user',
+        email = 'utest_user@example.com',
+        pass_salt = u'',
+        pass_hash = u'',
     )
 
+    '''
     project = Projects.add(
         #session = DBSession,
-        name = 'Test Project',
-        description = 'A test project.  For testing.',
+        name = u'Test Project',
+        description = u'A test project.  For testing.',
         creation_datetime = datetime.datetime.now(),
         user_id = user.id,
     )
@@ -73,32 +75,57 @@ def main(argv=sys.argv):
         user_id = user.id,
     )
 
+    task_label = TaskLabels.add(
+        label = u'High Priority',
+        forecolor = u'white',
+        backcolor = u'red',
+        project_id = project.id,
+    )
+
     task = Tasks.add(
         number = 1,
-        title = 'Test Task A',
-        contents = 'This is a task that needs to be completed',
+        title = u'Test Task A',
+        contents = u'This is a task that needs to be completed',
         creation_datetime = datetime.datetime.now(),
         due_datetime = datetime.datetime.now() + datetime.timedelta(days=1),
         user_id = user.id,
         project_id = project.id,
-    )
-
-    task_label = TaskLabels.add(
-        label = 'High Priority',
-        forecolor = 'white',
-        backcolor = 'red',
-        task_id = task.id,
-    )
-
-    ticket = Tickets.add(
-        number = 2
-        title = 'Test Ticket 001',
-        
+        task_label_id = task_label.id,
     )
 
     ticket_label = TicketLabels.add(
-        label = 'High Priority',
-        forecolor = 'white',
-        backcolor = 'red',
-        ticket_id = ticket.id,
+        label = u'Bug',
+        forecolor = u'white',
+        backcolor = u'orange',
+        project_id = project.id,
     )
+
+    ticket_priority = TicketPriorities.add(
+        label = u'High',
+        value = 100,
+        forecolor = u'white',
+        backcolor = u'red',
+        project_id = project.id,
+    )
+
+    ticket_status = TicketStatuses.add(
+        label = u'Open',
+        description = u'Not closed.',
+        value = 1,
+    )
+
+    ticket = Tickets.add(
+        number = 2,
+        title = u'Test Ticket 001',
+        contents = u'Do the things.  ***now***.',
+        creation_datetime = datetime.datetime.now(),
+        due_datetime = datetime.datetime.now() + datetime.timedelta(days=1),
+        edited = False,
+        task_id = task.id,
+        owner_id = user.id,
+        assignee_id = None,
+        ticket_label_id = ticket_label.id,
+        ticket_priority_id = ticket_priority.id,    
+        ticket_status_id = ticket_status.id,
+    )
+    '''
