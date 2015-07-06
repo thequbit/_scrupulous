@@ -25,26 +25,26 @@ def main(global_config, **settings):
     config.add_route('projects', '/projects')
     config.add_route('project', '/project/{id}')
 
-    config.add_route('project_assignments', '/project_assignments')
-    config.add_route('project_assignment', '/project_assignment/{id}')
+    config.add_route('project_assignments', '/project/{project_id}/assignments')
+    config.add_route('project_assignment', '/project/{project_id}/assignment/{id}')
 
-    config.add_route('task_labels', '/task_labels')
-    config.add_route('task_label', '/task_label/{id}')
+    config.add_route('task_labels', '/project/{project_id}/task_labels')
+    config.add_route('task_label', '/project/{project_id}/task_label/{id}')
 
-    config.add_route('tasks', '/tasks')
-    config.add_route('task', '/task/{id}')
+    config.add_route('tasks', '/project/{project_id}/tasks')
+    config.add_route('task', '/project/{project_id}/task/{id}')
 
-    config.add_route('ticket_labels', '/ticket_labels')
-    config.add_route('ticket_label', '/ticket_label/{id}')
+    config.add_route('ticket_labels', '/project/{project_id}/ticket_labels')
+    config.add_route('ticket_label', '/project/{project_id}/ticket_label/{id}')
 
-    config.add_route('ticket_priorities', '/ticket_priorities')
-    config.add_route('ticket_priority', '/ticket_priority/{id}')
+    config.add_route('ticket_priorities', '/project/{project_id}/ticket_priorities')
+    config.add_route('ticket_priority', '/project/{project_id}/ticket_priority/{id}')
 
-    config.add_route('ticket_statuses', '/ticket_statuses')
-    config.add_route('ticket_status', '/ticket_status/{id}')
+    config.add_route('ticket_statuses', '/project/{project_id}/ticket_statuses')
+    config.add_route('ticket_status', '/project/{project_id}/ticket_status/{id}')
 
-    config.add_route('tickets', '/tickets')
-    config.add_route('ticket', '/ticket/{id}')
+    config.add_route('tickets', '/project/{project_id}/task/{task_id}/tickets')
+    config.add_route('ticket', '/project/{project_id}/task/{task_id}/ticket/{id}')
 
     config.add_route('comments', '/comments')
     config.add_route('comment', '/comment/{id}')

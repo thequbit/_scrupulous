@@ -8,6 +8,7 @@
 
     <link rel="stylesheet" href="static/foundation/css/foundation.css" />
     <link rel="stylesheet" href="static/foundation/css/foundation-datepicker.css" />
+    <link rel="stylesheet" href="static/foundation/css/foundation-datatables.css" />
 
     <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
 
@@ -25,17 +26,23 @@
 
     <script src="static/foundation/js/vendor/modernizr.js"></script> 
 
+    <script src="static/foundation/js/vendor/jquery.datatables.1.9.4.min.js"></script>
+    <script src="static/foundation/js/foundation-datatables.js"></script>
+
     <script src="/static/js/rest.js"></script>
     <script src="/static/js/site.js"></script>
 
     <script>
         $(document).foundation({});
-        _site.load();
     </script>
     
     <div id="site-wrapper">
         ${self.body()}
     </div>
+
+    <script>
+        //_site.load();
+    </script>
 
     <script>
         // functions taken from

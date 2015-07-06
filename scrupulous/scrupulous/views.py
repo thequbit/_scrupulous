@@ -61,11 +61,11 @@ def check_payload(request, keys):
 
 ### Users
 
-@view_config(request_method='GET', route_name='users', renderer='json')
+@view_config(request_method='GET', route_name='users', renderer='templates/users.mak')
 def view_users(request):
 
     users = Users.get_all()
-    return {'code': 0, 'status': 'Success', 'users': [u.to_dict() for u in users]}
+    return {'users': [u.to_dict() for u in users]}
 
 @view_config(request_method='POST', route_name='users', renderer='json')
 def view_users_create(request):
@@ -131,8 +131,9 @@ def view_projects(request):
     #    user = Users.get_by_unique(unique)
     #    if not user is None:
     #        resp = ProjectAssignments.get_by_user_id(user.id)
-    resp['projects'] = ProjectAssignments.get_by_user_id(1)
-    return resp
+    assignments = ProjectAssignments.get_by_user_id(1)
+    print json.dumps(assignments)
+    return assignments
 
 @view_config(request_method='POST', route_name='projects', renderer='json')
 def view_project_create(request):
@@ -154,16 +155,16 @@ def view_project_create(request):
         resp['project_id'] = project.id
     return resp
 
-@view_config(request_method='GET', route_name='project', renderer='json')
+@view_config(request_method='GET', route_name='project', renderer='template/project.mak')
 def view_project(request):
 
-   resp = {'code': 0, 'status': 'Scuccess'}
+   #resp = {'code': 0, 'status': 'Scuccess'}
    project = Projects.get_by_id(request.matchdict['id'])
-   if project is None:
-       resp = {'copde': 1, 'status': 'Invalid project ID'}
-   else:
-       resp['project'] = project.to_dict()
-   return resp 
+   #if project is None:
+   #    resp = {'copde': 1, 'status': 'Invalid project ID'}
+   #else:
+   #resp['project'] = project.to_dict()
+   return project
 
 @view_config(request_method='PUT', route_name='project', renderer='json')
 def view_project_update(request):
@@ -189,12 +190,12 @@ def view_project_delete(request):
 
 ### Project Assignments 
 
-@view_config(request_method='GET', route_name='project_assignments', renderer='json')
-def view_project_assignments(request):
-
-    # TODO: implement?
-
-    return {}
+#@view_config(request_method='GET', route_name='project_assignments', renderer='json')
+#def view_project_assignments(request):
+#
+#    # TODO: implement?
+#
+#    return {}
 
 @view_config(request_method='POST', route_name='project_assignments', renderer='json')
 def view_project_assignments_create(request):
@@ -278,7 +279,7 @@ def view_tasks(request):
 @view_config(request_method='POST', route_name='tasks', renderer='json')
 def view_task_create(request):
 
-    keys = ['title', 'contents', 'due_datetime', 'user_id', 'project_id']
+    keys = ['title', 'contents', 'due_datetime']
     resp, payload = check_payload(request, keys)
     if not payload is None:
         task = Tasks.add(
@@ -286,14 +287,14 @@ def view_task_create(request):
             contents = payload['contents'],
             creation_datetime = datetime.datetime.now(),
             due_datetime = datetime.datetime.strptime(payload['due_datetime'], "%Y-%m-%d"),
-            user_id = payload['user_id'],
-            project_id = payload['project_id'],
+            user_id = 1, #payload['user_id'],
+            project_id = request.matchdict['project_id'],#payload['project_id'],
         )
         resp['task_id'] = task.id
     return resp
 
 @view_config(request_method='GET', route_name='task', renderer='json')
-def view_tasks(requests):
+def view_task(requests):
 
     resp = {'code': 0, 'status': 'Success'}
     task = Tasks.get_by_id(request.matchdict['id'])
@@ -478,10 +479,12 @@ def view_tickets(requests):
 @view_config(request_method='POST', route_name='tickets', renderer='json')
 def view_tickets_create(request):
 
-    keys = ['title', 'contents', 'due_datetime', 'task_id',
-            'owner_id', 'assignee_id', 'ticket_label_id',
-            'ticket_priority_id', 'ticket_status_id']
+    keys = ['title', 'contents', 'due_datetime', 'assignee_id', 
+            'ticket_label_id', 'ticket_priority_id', 'ticket_status_id']
     resp, payload = check_payload(request, keys)
+    print '\n\n'
+    print payload
+    print '\n\n'
     if not payload is None:
         ticket = Tickets.add(
             title = payload['title'],
@@ -489,8 +492,8 @@ def view_tickets_create(request):
             creation_datetime = datetime.datetime.now(),
             due_datetime = datetime.datetime.strptime(payload['due_datetime'], "%Y-%m-%d"),
             edited = False,
-            task_id = payload['task_id'],
-            owner_id = payload['owner_id'],
+            task_id = request.matchdict['task_id'], #payload['task_id'],
+            owner_id = 1, #payload['owner_id'],
             assignee_id = payload['assignee_id'],
             ticket_label_id = payload['ticket_label_id'],
             ticket_priority_id = payload['ticket_priority_id'],
@@ -531,12 +534,12 @@ def view_tickets_delete(request):
 
 ### Comments
 
-@view_config(request_method='GET', route_name='comments', renderer='json')
-def view_comments(request):
-
-    # TODO: implement?
-
-    return {}
+#@view_config(request_method='GET', route_name='comments', renderer='json')
+#def view_comments(request):
+#
+#    # TODO: implement?
+#
+#    return {}
 
 @view_config(request_method='POST', route_name='comments', renderer='json')
 def view_comments_create(request):

@@ -1,0 +1,570 @@
+<%inherit file="base.mak"/>
+
+    <style>
+
+        .top-bar .row {
+            max-width: 62.5rem !important;
+        }
+
+        .top-indent {
+            margin-top: 10px;
+        }
+
+        .single-indent {
+            margin-left: 20px;
+        }
+
+        .single-indent-right {
+            margin-right: 20px;
+        }
+
+        .double-indent {
+            margin-left: 40px;
+        }
+
+        .double-indent-right {
+            margin-right: 40px;
+        }
+
+        .tripple-indent {
+            margin-left: 60px;
+        }
+
+        .quadruple-indent {
+            margin-left: 80px; 
+        }
+
+        .contents-box {
+            display: none;
+            margin-top: 5px;
+            margin-bottom: 5px;
+            margin-right: 20px;
+            padding: 10px;
+            box-shadow: 0px 0px 0px 1px #DDD, 0px 4px 8px rgba(221, 221, 221, 0.9);
+        }
+
+        .box {
+            padding: 10px;
+            margin: 25px;
+            border: 1px solid #DDD;
+        }
+
+        .small-box {
+            margin-left: 5px;
+            border-radius: 5px;
+            padding-left: 5px;
+            padding-right: 5px;
+            display: inline-block;
+        }
+
+        .task-list {
+            display: none;
+        }
+
+        .task-entry {
+            display: none;
+        }
+
+        .ticket-list {
+            display: none;
+        }
+
+        .ticket-entry {
+            display: none;
+        }
+
+    </style>
+
+    <div id="worker-modal" class="reveal-modal" data-reveal aria-labelledby="Modal" aria-hidden="true" role="dialog">
+        <div id="worker-modal-contents"></div>
+        <a class="close-reveal-modal" aria-label="Close">&#215;</a>
+    </div>
+
+    <div class="top-bar">
+        <div class="row">
+            <div class="columns medium-12">
+                <a href="#/projects">Projects</a>
+                <a class="single-indent" href="#/users">Users</a>
+                <a class="single-indent" href="#/reports">Reports</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="columns medium-12">
+            <div id="page-contents"></div>
+        </div>
+    </div>
+
+    <script>
+
+        String.prototype.fupper = function() {
+            return this.charAt(0).toUpperCase() + this.slice(1);
+        }
+
+        String.prototype.nthfind = function(char, nth) {
+            var found_first = false;
+            for( var i=0; i<this.length; i++) {
+                if ( this[i] == ' ' && found_first == false )
+                    found_first = true;
+                else if ( this[i] == ' ' )
+                    return i;
+            }
+            return -1;
+        }
+
+        function get_style(thing) {
+            var ret_style = '';
+            ret_style += 'color: ' + thing.forecolor + '; ';
+            ret_style += 'background-color: ' + thing.backcolor + '; ';
+            return ret_style;
+        }
+
+        function build_contents_html(type, thing, indent) {
+            var html = '';
+            html += '<div class="' + indent + '-indent contents-box" id="contents-' + type + '-' + thing.id + '">';
+            html += '<i><a href="#/user/' + thing.owner.id + '">' + thing.owner.first + ' ' + thing.owner.last + '</a> opened this ' + type + ' on ' + thing.creation_datetime + '.</i>';
+            if ( thing.assignee !== undefined && thing.assignee.id !== undefined )
+                html += '</br><a href="#/user/' + thing.assignee.id + '">' + thing.assignee.first + ' ' + thing.assignee.last + '</a> is currently assigned to this ' + type + '.'; 
+            html += '<p><div class="box">' + thing.contents + '</div></p>';
+            html += '</div>';
+            return html;
+        }
+
+        function build_ticket_html(ticket) {
+            var html = '';
+            html += '<div class="ticket-entry">';
+            html += '<h5 class="top-indent double-indent">';
+            html += '<a class="expand-ticket" ticket-id="'+ ticket.id + '"> + </a>';
+            html += 'Ticket: <a href="#/ticket/' + ticket.id +'">' + ticket.title + '</a>';
+            if ( ticket.label.id !== undefined )
+                html += '<div class="small-box" style="' + get_style(ticket.label) + '">' + ticket.label.label + '</div>';
+            if ( ticket.priority.id !== undefined )
+                html += '<div class="small-box" style="' + get_style(ticket.priority) + '">' + ticket.priority.label + '</div>';
+            if ( ticket.status.id !== undefined )
+                html += '<div class="small-box" style="' + get_style(ticket.status) + '">' + ticket.status.label + '</div>'; 
+            html += '</h5>';
+            html += build_contents_html('ticket', ticket, 'tripple');
+            html += '</div>';
+            return html;
+        }
+
+        function build_task_html(task) {
+            var html = '';
+            html += '<div class="task-entry">';
+            html += '<h4 class="top-indent single-indent">';
+            html += '<a class="expand-task" task-id="' + task.id + '"> + </a>';
+            html += 'Task: <a href="#/task/' + task.id +'">' + task.title + '</a>';
+            html += '</h4>';
+            html += '<div class="ticket-list" id="ticket-list-' + task.id + '">';
+            if ( task.tickets.length == 0 ) {
+                // display task contents if there are no tickets
+                html += build_contents_html('task', task, 'double'); 
+            } else {
+                task.tickets.forEach(function(ticket) {
+                    html += build_ticket_html(ticket);
+                });
+            }
+            html += '</div>';
+            html += '</div>';
+            return html;
+        }
+
+        function build_project_html(project) {
+            var html = '';
+            html += '<h3 class="top-indent">';
+            html += '<a class="expand-project" project-id="' + project.project.id + '"> + </a>';
+            html += '<a onclick="view_project(' + project.project.id + ');">' + project.project.name + '</a>';
+            html += '</h3>';
+            html += '<div class="task-list" id="task-list-' + project.project.id + '">';
+            html += '<a class="single-indent" href="#/task/new">New Task</a>';
+            if ( project.project.tasks.length == 0 ) {
+            } else {
+                project.project.tasks.forEach(function(task) {
+                    html += build_task_html(task);
+                });
+            }
+            html += '</div>';
+            html += '<hr>'; 
+            return html;
+        }
+
+        function _renderer_home() {
+            html = '';
+            html += '<p><div class="single-indent double-indent-right"><label>Command Input</label><input type="text" id="command-input"></input></div></p>';
+            html += '<a onclick="new_project();">New Project</a>';
+            _site.projects.forEach(function(project) {
+                html += build_project_html(project);
+            });
+            return html;
+        }
+
+        var shift_down = false;
+
+        function _configure_page() { 
+            $('.expand-project').on('click', function() {
+                var state = $(this).html().trim();
+                var sign = '';
+                var project_id = $(this).attr('project-id');
+                if ( state == '+' ) {
+                    sign = ' &#8211; ';
+                    var tasks = $('#task-list-' + project_id).find('div');
+                    $('#task-list-' + project_id).show();
+                    for( var i=0; i<tasks.length; i++) {
+                        if ( $(tasks[i]).hasClass('task-entry') )
+                            $(tasks[i]).show();
+                    }
+                } else {
+                    sign = ' + ';
+                    var tasks = $('#task-list-' + project_id).find('div');
+                    $('#task-list-' + project_id).hide();
+                    for( var i=0; i<tasks.length; i++) {
+                        if ( $(tasks[i]).hasClass('task-entry') )
+                            $(tasks[i]).hide();
+                    }
+                }
+                $(this).html(sign);
+            });
+            $('.expand-task').on('click', function() {
+                var state = $(this).html().trim();
+                var sign = '';
+                var task_id = $(this).attr('task-id');
+                if ( state == '+' ) {
+                    sign = ' &#8211; ';
+                    var tickets = $('#ticket-list-' + task_id).find('div');
+                    $('#ticket-list-' + task_id).show();
+                    for( var i=0; i<tickets.length; i++) {
+                        if ( $(tickets[i]).hasClass('ticket-entry') ) 
+                            $(tickets[i]).show();
+                    }
+                    $('#contents-task-' + task_id).show(); 
+                } else {
+                    sign = ' + ';
+                    var tickets = $('#ticket-list-' + task_id).find('div');
+                    $('#ticket-list-' + task_id).show();
+                    for( var i=0; i<tickets.length; i++) {
+                        if ( $(tickets[i]).hasClass('ticket-entry') ) 
+                            $(tickets[i]).hide();
+                    }
+                    $('#contents-task-' + task_id).hide();
+                }
+                $(this).html(sign);
+            });
+            $('.expand-ticket').on('click', function() {
+                var state = $(this).html().trim();
+                var sign = '';
+                var task_id = $(this).attr('ticket-id');
+                if ( state == '+' ) {
+                    sign = ' &#8211; ';
+                    $('#contents-ticket-' + task_id).show();
+                } else {
+                    sign = ' + ';
+                    $('#contents-ticket-' + task_id).hide();
+                }
+                $(this).html(sign);
+            });
+            $('#command-input').keyup(function(e) {
+                if( e.keyCode == 13 ) {
+                    var cmd = $('#command-input').val();
+                    $('#command-input').val('');
+                    execute_cmd(cmd);
+                }
+            });
+            $(document).keydown(function(e) {
+                if ( e.keyCode == 16 ) {
+                    shift_down = true;
+                } else if ( e.keyCode == 59 && shift_down == true ) {
+                    $('#command-input').focus();
+                }
+            });
+            $(document).keyup(function(e) {
+                if ( e.keyCode == 16 ) {
+                    shift_down = false;
+                }
+            });
+        }
+
+        function build_comments_html(comments) {
+            var html = '';
+            html += '<label>Comments</lable></br><hr>';
+            comments.forEach(function(comment) {
+                html += '<i><a href="#/user/' + comment.user.id + '">' + comment.user.first + ' ' + comment.user.last + '</a> commented on ' + comment.creation_datetime + '</i>';
+                html += '<div class="box">' + comment.contents + '</div>';
+            });
+            return html
+        }
+
+        function build_modal_html(mode, project, task, ticket, fields) {
+            var html = '';
+            var target = {}
+            var func = '';
+            var button_text = 'Update';
+            var add = '';
+            var name = 'project';
+            var project_id = null;
+            var task_id = null;
+            var ticket_id = null;
+
+            if ( mode == 'new' ) {
+                button_text = 'Create';
+                add = 'add-';
+            }
+
+            if ( project != null ) {
+                html += '<h3>' + project.project.name + '</h3>';
+                target = project.project;
+                func = 'update_project';
+                name = 'project';
+                project_id = project.id;
+            } else {
+                html += '<h3>New Project</h3>';
+                func = 'create_project';
+                name = 'project';
+            }
+
+            if ( task != null ) {
+                html += '<h4>' + task.title + '</h4>';
+                target = task;
+                func = 'update_task';
+                name = 'task';
+                task_id = task.id;
+            } else if ( task == null && project != null && mode == 'new' ) {
+                html += '<h4>New Task</h4>';
+                func = 'create_task';
+                name = 'task';
+            }
+
+            if ( ticket != null ) {
+                html += '<h5>' + ticket.title + '</h5>';
+                target = ticket;
+                func = 'update_ticket';
+                name = 'task';
+                ticket_id = ticket.id;
+            } else if ( ticket == null && task != null && project != null && mode == 'new' ) {
+                html += '<h5>New Ticket</h5>';
+                func = 'update_task';
+                name = 'task';
+            }
+
+            for( var key in fields ) {
+                var val = target[key];
+                if ( mode == 'new' )
+                    val = '';
+                html += '<label>' + key.fupper() + '</label>';
+                if ( fields[key] == 'input/text' ) {
+                    html += '<input type="text" id="' + add + '' + name + '-' + key + '" value="' + val + '"></input>';
+                } else if ( fields[key] == 'textarea' ) {
+                    html += '<textarea rows="8" id="' + add + '' + name + '-' + key + '">' + val + '</textarea>';
+                }
+            }
+            html += '<div class="right"><a class="button" onclick="' + func + '(' + project_id + ', ' + task_id + ', ' + ticket_id + ')">' + button_text + '</a></div>';
+            html += '<div>';
+            html += '</br></br>';
+            html += 'Comments:';
+            html += '<hr>';
+            html += '<a onclick="add_comment(' + project_id + ', ' + task_id + ', ' + ticket_id + ')">Add Comment </a>';
+            for( var comment in target.comments ) {
+                html += '<i><a href="/user/' + comment.user.id + '">' + comment.user.first + ' ' + comment.user.last + '</a> commented on ' + comment.creation_datetime + '.</i>';
+            }
+            html += '</div>';
+            return html; 
+        }
+
+        function create_project() {
+            var name = $('#add-project-name').val();
+            var description = $('#add-project-description').val();
+            _site.create_project(name, description);
+            close_modal();
+        }
+
+        function update_project(id) {
+            var name = $('#project-name').val();
+            var description = $('#project-description').val();
+            _site.update_project(id, name, description);
+            close_modal();
+        }
+
+        function create_task() {
+            var title = $('#task-title').val();
+            var description = $('#task-description').val();
+            var due_datetime = $('#task-due_datetime').val();
+            _site.create_task(title, description, due_datetime);
+            close_modal();
+        }
+
+        function update_task() {
+            var title = $('#task-title').val();
+            var description = $('#task-description').val();
+            var due_datetime = $('#task-due_datetime').val();
+            _site.create_task(title, description, due_datetime);
+            close_modal();
+        }
+
+        function create_ticket(project_id) {
+            var title = $('#task-title').val();
+            var description = $('#task-description').val();
+            var due_datetime = $('#task-due_datetime').val();
+            _site.create_task(title, description, due_datetime);
+            close_modal();
+        }
+
+        function update_ticket(id, project_id) {
+            var title = $('#task-title').val();
+            var description = $('#task-description').val();
+            var due_datetime = $('#task-due_datetime').val();
+            _site.create_task(title, description, due_datetime, user_id, project_id);
+            close_modal();
+        }
+
+        function create_comment(id, project_id, task_id, ticket_id) {
+            var contents = $('#comment-contents');
+        }
+
+        function open_modal(action, type, focus, html) {
+            var add = '';
+            if ( action == 'new' )
+                add = 'add-';
+            $('#worker-modal-contents').html(html);
+            $(document).on('opened.fndtn.reveal', '[data-reveal]', function () {
+                if ( focus !== undefined )
+                    $('#' + add + type + '-' + focus).focus();
+            });
+            $('#worker-modal').foundation('reveal', 'open');
+        }
+
+        function close_modal() {
+            $('#worker-modal').foundation('reveal', 'close');
+            $('#worker-modal-contents').html('');
+        }
+
+        function new_project() {
+            fields = {name: 'input/text', description: 'textarea'};
+            html = build_modal_html('new', null, null, null, fields);
+            open_modal('new', 'project', 'name', html);
+        }
+
+        function view_project(id) {
+            fields = {name: 'input/text', description: 'textarea'};
+            var project = _site.get_project_by_id(id)
+            var html = build_modal_html('open', project, null, null, fields);
+            open_modal('view', 'project', 'name', html);
+        }
+
+        /*
+        function nav(type, action) {
+            console.log('nav: ' + type + ' - ' + action);
+            var html = 'Error.';
+            var focus = undefined;
+            switch(type) {
+                case 'project':
+                    focus = 'name';
+                    fields = {name: 'input/text', description: 'textarea'};
+                    if ( action == 'new' ) {
+                        html = build_modal_html('new', null, null, null, fields);
+                    } else { 
+                        var id = action;
+                        var project = _site.get_project_by_id(id)
+                        html = build_modal_html('open', project, null, null, fields);
+                    }
+                    break;
+                case 'task':
+                    focus = 'title';
+                    fiels = {title: 'input/text', contents: 'textarea', due_datetime: 'input/date'};
+                    if ( action == 'new' ) {
+                        //html = build_add_task_modal_html();
+                        html = build_modal_html('new', project, null, null, fields); 
+                    } else {
+                        var id = action;
+                        var task = _site.get_task_byd_id(id);
+                        html = build_task_modal_html(task);
+                    }
+                    break;
+                case 'ticket':
+                    html = build_ticket_modal_html(id);
+                    break;
+                case '':
+                default:
+                    break;
+            }
+            var add = '';
+            if ( action == 'new' )
+                add = 'add-';
+            $('#worker-modal-contents').html(html);
+            $(document).on('opened.fndtn.reveal', '[data-reveal]', function () {
+                if ( focus !== undefined )
+                    $('#' + add + type + '-' + focus).focus();
+            });
+            $('#worker-modal').foundation('reveal', 'open');
+        }
+        */
+
+        function execute_cmd(cmd) {
+            console.log('executing command: ' + cmd);
+            if ( cmd.charAt(0) == ':')
+                cmd = cmd.slice(1);
+            var parts = cmd.split(' ');
+            switch(parts[0]) {
+                case 'new':
+                    if ( parts.length > 1 ) {
+                        switch(parts[1]) {
+                            case 'project':
+                                nav('project', 'new');
+                                break;
+                            case 'task':
+                                nav('task', 'new');
+                                break;
+                            case 'ticket':
+                                nav('ticket', 'new');
+                                break;
+                            case '':
+                            default:
+                                break;
+                        }
+                    }
+                    break;
+                case 'open':
+                    if ( parts.length > 2 ) {
+                        var name = cmd.substring(cmd.nthfind(' ',2)+1);
+                        switch(parts[1]) {
+                            case 'project':
+                                var id = name;
+                                if ( name.indexOf('"') != -1 ) {
+                                    //console.log(name);
+                                    name = name.substring(1, name.length-1);
+                                    project = _site.get_project_by_name(name);
+                                    id = project.id;
+                                    //console.log(name);
+                                    //console.log(project.id);
+                                }
+                                nav('project', id)
+                                break;
+                            case 'task':
+                                break;
+                            case 'ticket':
+                                break;
+                            case '':
+                            default:
+                                break;
+                        }
+                    }
+                case '':
+                default:
+                    break;
+            }
+        }
+
+        /*
+        window.onhashchange = function() {
+            var loc = location.hash.slice(1);
+            var parts = loc.split('/');
+            if ( parts.length == 3 ) {
+                var root = parts[1]
+                var action = parts[2];
+                nav(root, action);
+            }
+            window.location.hash = '';
+        }
+        */
+        _site.set_renderer(_renderer_home, _configure_page);
+
+    </script>
