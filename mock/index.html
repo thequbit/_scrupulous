@@ -1,0 +1,81 @@
+<html>
+<head>
+
+    <title>scupulous</title>
+    
+    <link rel="stylesheet" href="foundation/css/foundation.css" />
+    <link rel="stylesheet" href="css/site.css" />
+    <link rel="stylesheet" href="font-awesome-4.4.0/css/font-awesome.css" />
+    <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+    
+</head>
+<body>
+
+    <div class="site-wrapper">
+        <div class="top-wrapper columns large-12">
+            <div class="right">
+                <a href="#">reports</a>
+                <a href="#">scripts</a>
+            </div>
+        </div>
+        <div class="contents-wrapper">
+            <div class="left-area max-height columns large-2">
+                <h6>Status Masks</h6>
+                <div id="status-masks" class="masks">
+                    <input type="checkbox" checked>Open</input></br>
+                    <input type="checkbox" checked>In Progress</input></br>
+                    <input type="checkbox" checked>Closed</input>
+                </div>
+                <a href="#">all</a><div class="right"><a href="#">none</a></div>
+                <hr>
+                <h6>Label Masks</h6>
+                <div id="label-masks" class="masks">
+                </div>
+                <a href="#">all</a><div class="right"><a href="#">none</a></div>
+                <hr>
+                <h6>User Masks</h6>
+                <div id="user-masks" class="masks">
+                </div>
+                <a href="#">all</a><div class="right"><a href="#">none</a></div>
+                <hr>
+            </div>
+            <div id="entities" class="entities horizontal-scroll  max-height">
+                    
+                    <div class="entity-column">
+                        loading ...
+                    </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="foundation/js/vendor/jquery.js"></script>
+    <script src="foundation/js/foundation/foundation.js"></script>
+    <script src="foundation/js/vendor/modernizr.js"></script> 
+    
+    <script src="js/site.js"></script>
+    
+    <script>
+        $(document).foundation({});
+    </script>
+    
+    <script>
+        site.init();
+        site.load_entity({
+            name: 'Entity',
+            tickets: [{
+                title: 'Ticket',
+                status: 'closed',
+                label: 'task',
+                label_color: 'red',
+                assignee: {
+                    first: 'Tim',
+                    last: 'Duffy',
+                }
+            }]
+        }
+        site.refresh_entities();
+        site.refresh_masks();
+    </script>
+    
+</body>
+</html>
