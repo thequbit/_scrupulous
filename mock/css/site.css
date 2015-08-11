@@ -83,16 +83,16 @@ body {
     padding-right: 5px;
 }
 
-.ticket-open {
-    background-color: rgba(255, 0, 0, .1);
+.ticket-status-open {
+    background-color: rgba(255, 0, 0, .3);
 }
 
-.ticket-in-progress {
-    /*background-color: rgba(0, 0, 255, .1);*/
+.ticket-status-in-process {
+    background-color: rgba(255, 255, 0, .3);
 }
 
-.ticket-closed {
-    background-color: rgba(0, 255, 0, .1);
+.ticket-status-closed {
+    background-color: rgba(0, 255, 0, .3);
 }
 
 
@@ -113,6 +113,6 @@ body {
     padding-left: 1rem;
 }
 
-.checkbox-mask {
+.mask-checkbox {
     margin-right: .5rem !important;
 }

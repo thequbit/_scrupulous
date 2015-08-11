@@ -14,19 +14,19 @@
     <div class="site-wrapper">
         <div class="top-wrapper columns large-12">
             <div class="right">
-                <a href="#">reports</a>
-                <a href="#">scripts</a>
+                <a href="#">Reports</a>
+                <a href="#">Scripts</a>
             </div>
         </div>
         <div class="contents-wrapper">
             <div class="left-area max-height columns large-2">
                 <h6>Status Masks</h6>
                 <div id="status-masks" class="masks">
-                    <input type="checkbox" checked>Open</input></br>
-                    <input type="checkbox" checked>In Progress</input></br>
-                    <input type="checkbox" checked>Closed</input>
+                    <input class="status-mask-checkbox mask-checkbox" type="checkbox" data-value="open">Open</input></br>
+                    <input class="status-mask-checkbox mask-checkbox" type="checkbox" data-value="in-process">In Process</input></br>
+                    <input class="status-mask-checkbox mask-checkbox" type="checkbox" data-value="closed">Closed</input>
                 </div>
-                <a href="#">all</a><div class="right"><a href="#">none</a></div>
+                <a id="status-masks-select-all" href="#">all</a><div class="right"><a href="#">none</a></div>
                 <hr>
                 <h6>Label Masks</h6>
                 <div id="label-masks" class="masks">
@@ -40,10 +40,9 @@
                 <hr>
             </div>
             <div id="entities" class="entities horizontal-scroll  max-height">
-                    
-                    <div class="entity-column">
-                        loading ...
-                    </div>
+                <div class="entity-column">
+                    loading ...
+                </div>
             </div>
         </div>
     </div>
@@ -61,19 +60,105 @@
     <script>
         site.init();
         site.load_entity({
-            name: 'Entity',
+            name: 'VERDI-C-003',
             tickets: [{
-                title: 'Ticket',
+                title: 'VHDL Wrapper',
+                number: 1,
                 status: 'closed',
-                label: 'task',
+                label: 'firmware',
                 label_color: 'red',
                 assignee: {
                     first: 'Tim',
                     last: 'Duffy',
                 }
+            },
+            {
+                title: 'Entity JSON Config',
+                number: 2,
+                status: 'open',
+                label: 'config',
+                label_color: 'blue',
+                assignee: {
+                    first: 'Scott',
+                    last: 'Smith',
+                }
+            },
+            {
+                title: 'CLIP Tool Adaptation',
+                number: 3,
+                status: 'open',
+                label: 'tools',
+                label_color: 'green',
+                assignee: {
+                    first: 'Tim',
+                    last: 'Duffy',
+                }
+            },
+            {
+                title: 'LabVIEW FPGA Driver Library',
+                number: 4,
+                status: 'in-process',
+                label: 'drivers',
+                label_color: 'magenta',
+                assignee: {
+                    first: 'Tim',
+                    last: 'Duffy',
+                }
+            },
+            {
+                title: 'LabVIEW FPGA Example Project',
+                number: 5,
+                status: 'in-process',
+                label: 'fpga',
+                label_color: 'royalblue'
+            },
+            {
+                title: 'LabVIEW RT Software',
+                number: 6,
+                status: 'open',
+                label: 'software',
+                label_color: 'orange'
+            },
+            {
+                title: 'LabVIEW RT Example Project',
+                number: 7,
+                status: 'closed',
+                label: 'software',
+                label_color: 'orange'
+            }
+            ]
+        });
+        /*
+        site.load_entity({
+            name: 'VERDI-P-001',
+            tickets: [{
+                title: 'VHDL Wrapper',
+                closed: false
             }]
-        }
-        site.refresh_entities();
+        });
+        site.load_entity({
+            name: 'VERDI-B-003',
+            tickets: [{
+                title: 'VHDL Wrapper',
+                closed: false
+            }]
+        });
+        site.load_entity({
+            name: 'VERDI-E-001',
+            tickets: [{
+                title: 'VHDL Wrapper',
+                closed: true
+            }]
+        });
+        site.load_entity({
+            name: 'VERDI-HSX-001',
+            tickets: [{
+                title: 'VHDL Wrapper',
+                closed: true
+            }]
+        });
+        */
+        site.load_entities();
         site.refresh_masks();
     </script>
     
