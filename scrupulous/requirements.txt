@@ -1,0 +1,10 @@
+SQLAlchemy
+colander
+cornice
+pyramid
+pyramid_tm
+sqlalchemy_utils
+transaction
+waitress
+zope.sqlalchemy
+

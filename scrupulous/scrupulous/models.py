@@ -1,41 +1,46 @@
-import transaction
+from uuid import uuid4
 
-from sqlalchemy import text
-
+from sqlalchemy.sql import func
+from sqlalchemy_utils import UUIDType
 from sqlalchemy import (
     Column,
-    Index,
     ForeignKey,
     Integer,
-    Float,
-    Text,
-    Unicode,
+    UnicodeText,
     DateTime,
-    Boolean,
-    )
+)
 
 from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy.orm import (
+    relationship,
     scoped_session,
     sessionmaker,
-    relationship,
-    backref,
-    )
+)
 
 from zope.sqlalchemy import ZopeTransactionExtension
+import transaction
 
-DBSession = scoped_session(
-    sessionmaker(extension=ZopeTransactionExtension(), expire_on_commit=False)
-    )
+DBSession = scoped_session(sessionmaker(
+    extension=ZopeTransactionExtension(keep_session=True),
+    expire_on_commit=False))
 Base = declarative_base()
 
+
+class TimeStampMixin(object):
+    creation_datetime = Column(DateTime, server_default=func.now())
+    modified_datetime = Column(DateTime, server_default=func.now())
+
 class CreationMixin():
+
+    id = Column(UUIDType(binary=False), primary_key=True)
 
     @classmethod
     def add(cls, **kwargs):
         with transaction.manager:
             thing = cls(**kwargs)
+            if thing.id is None:
+                thing.id = uuid4()
             DBSession.add(thing)
             transaction.commit()
         return thing
@@ -46,10 +51,7 @@ class CreationMixin():
             things = DBSession.query(
                 cls,
             ).all()
-            retThings = []
-            for t in things:
-                retThings.append(t.to_dict())
-        return retThings
+        return things
 
     @classmethod
     def get_by_id(cls, id):
@@ -64,381 +66,136 @@ class CreationMixin():
     @classmethod
     def delete_by_id(cls, id):
         with transaction.manager:
-            thing = DBSession.query(
-                cls,
-            ).filter(
-                cls.id == id,
-            ).first()
-            DBSession.delete(thing)
+            thing = cls.get_by_id(id)
+            if thing is not None:
+                DBSession.delete(thing)
             transaction.commit()
         return thing
 
     @classmethod
-    def update_by_id(cls, id, *args, **kargs):
+    def update_by_id(cls, id, **kwargs):
         with transaction.manager:
-             thing = cls.get_by_id(id)
-             # TODO: magic
-             DBSession.add(thing)
-             transaction.commit()
+            keys = set(cls.__dict__)
+            thing = cls.get_by_id(id)
+            if thing is not None:
+                for k in kwargs:
+                    if k in keys:
+                        setattr(thing, k, kwargs[k])
+                DBSession.add(thing)
+                transaction.commit()
         return thing
 
     @classmethod
-    def update(cls, thing):
-        with transaction.manager:
-            DBSession.add(thing)
-            transaction.commit()
-        return thing
-
-class UserTypes(Base, CreationMixin):
-
-    __tablename__ = 'user_types'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(Unicode)
-    description = Column(Unicode)
-
-    users = relationship('Users', backref='user_type', lazy='joined')
+    def reqkeys(cls):
+        keys = []
+        for key in cls.__table__.columns:
+            if '__required__' in type(key).__dict__:
+                keys.append(str(key).split('.')[1])
+        return keys
 
     def to_dict(self):
         return {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
+            'id': str(self.id),
+            'creation_datetime': str(self.creation_datetime),
         }
 
-class Users(Base, CreationMixin):
+class Users(Base, CreationMixin, TimeStampMixin):
 
     __tablename__ = 'users'
+    
+    first = Column(UnicodeText, nullable=False)
+    last = Column(UnicodeText, nullable=False)
+    email = Column(UnicodeText, nullable=False)
 
-    id = Column(Integer, primary_key=True)
-    unique = Column(Unicode)
-    first = Column(Unicode)
-    last = Column(Unicode)
-    email = Column(Unicode)
-    pass_salt = Column(Unicode)
-    pass_hash = Column(Unicode)
-
-    user_type_id = Column(Integer, ForeignKey('user_types.id'))
-
-    comments = relationship('Comments', backref='user', lazy='joined')
-    projects = relationship('Projects', backref='user', lazy='joined')
-    project_assignments = relationship('ProjectAssignments', backref='user', lazy='joined')
-    tasks = relationship('Tasks', backref='user', lazy='joined')
-    tickets_owned = relationship('Tickets', backref='owner', lazy='joined', foreign_keys='Tickets.owner_id')
-    tickets_assigned = relationship('Tickets', backref='assignee', lazy='joined', foreign_keys='Tickets.assignee_id')
+    tickets = relationship('Tickets', backref='assignee', lazy='joined')
 
     def to_dict(self):
-        return {
-            'id': self.id,
-            'unique': self.unique,
-            'first': self.first,
-            'last': self.last,
-        }
+        resp = super(Users, self).to_dict()
+        #resp.update(
+        #
+        #)
+        return resp
 
-    @classmethod
-    def get_by_unique(self, unique):
-        with transaction.manager:
-            user = DBSession.query(
-                Users,
-            ).filter(
-                Users.unique == unique,
-            ).first()
-        return user
-
-    @classmethod
-    def auth(self, email, password):
-        with transaction.manager:
-            user = DBSession.query(
-                Users,
-            ).filter(
-                Users.email == email,
-            ).first()
-            if not user is None:
-                pass_hash = str(hashlib.md5(
-                    '%s%s' % (password, user.pass_salt
-                )).hexdigest())
-                if not user.pass_hash == pass_hash:
-                    user = None
-        return user
-
-class Comments(Base, CreationMixin):
-
-    __tablename__ = 'comments'
-
-    id = Column(Integer, primary_key=True)
-    contents = Column(Unicode)
-    creation_datetime = Column(DateTime)
-    edited = Column(Boolean)
-
-    author_id = Column(Integer, ForeignKey('users.id'))
-
-    project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
-    task_id = Column(Integer, ForeignKey('tasks.id'), nullable=True)
-    ticket_id = Column(Integer, ForeignKey('tickets.id'), nullable=True)
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'contents': self.contents,
-            'creation_datetime': str(self.creation_datetime).split(' ')[0],
-            'edited': self.edited,
-            'user': self.user.to_dict(),
-        }
-
-class Projects(Base, CreationMixin):
+class Projects(Base, CreationMixin, TimeStampMixin):
 
     __tablename__ = 'projects'
 
-    id = Column(Integer, primary_key=True)
-    name = Column(Unicode)
-    description = Column(Unicode)
-    creation_datetime = Column(DateTime)
-    current_number = Column(Integer)
-
-    user_id = Column(Integer, ForeignKey('users.id'))
-    
-    comments = relationship('Comments', backref='project', lazy='joined')
-    #project_assignments = relationship('ProjectAssignments', backref='project', lazy='joined')
-    task_labels = relationship('TaskLabels', backref='project', lazy='joined')
-    tasks = relationship('Tasks', backref='project', lazy='joined')
-    ticket_labels = relationship('TicketLabels', backref='project', lazy='joined')
-    ticket_priorities = relationship('TicketPriorities', backref='project', lazy='joined')
-    ticket_statuses = relationship('TicketStatuses', backref='project', lazy='joined')
-    assignees = relationship('ProjectAssignments', backref='project', lazy='joined')
+    name = Column(UnicodeText, nullable=False)
 
     def to_dict(self):
-        return {
-             'id': self.id,
-             'name': self.name,
-             'description': self.description,
-             'creation_datetime': str(self.creation_datetime).split(' ')[0],
-             'owner': self.user.to_dict(), #self.user.to_dict(), # backref
-             'comments': [c.to_dict() for c in self.comments],
-             'task_labels': [l.to_dict() for l in self.task_labels],
-             'tasks': [t.to_dict() for t in self.tasks],
-             'ticket_labels': [t.to_dict() for t in self.ticket_labels],
-             'ticket_priorities': [t.to_dict() for t in self.ticket_priorities],
-             'ticket_statuses': [t.to_dict() for t in self.ticket_statuses],
-             'users': [a.user.to_dict() for a in self.assignees],
-        }
-
-class ProjectAssignments(Base, CreationMixin):
-
-    __tablename__ = 'project_assignments'
-
-    id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey('projects.id'))
-    user_id = Column(Integer, ForeignKey('users.id'))
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'project': self.project.to_dict(), #Projects.get_by_id(self.project_id).to_dict(),
-            'user': self.user.to_dict(), #Users.get_by_id(self.user_id).to_dict(),
-        }
-
-    @classmethod
-    def get_by_user_id(cls, user_id):
-        with transaction.manager:
-            resp = DBSession.query(
-                cls,
-            ).filter(
-                cls.user_id == user_id,
-            ).all()
-            project_assignments = []
-            for pa in resp:
-                project_assignments.append(pa.to_dict())
-        return project_assignments
-
-    @classmethod
-    def delete_by_project_id(cls, project_id):
-        with transaction.manager:
-            project_assignments = DBSession.query(
-                ProjectAssignments,
-            ).filter(
-                ProjectAssignments.project_id == int(project_id),
-            ).all()
-        for project_assignment in project_assignments:
-            ProjectAssignments.delete_by_id(project_assignment.id)
-        return project_assignments
-
-class TaskLabels(Base, CreationMixin):
-
-    __tablename__ = 'task_labels'
-
-    id = Column(Integer, primary_key=True)
-    label = Column(Unicode)
-    forecolor = Column(Unicode)
-    backcolor = Column(Unicode)
-
-    project_id = Column(Integer, ForeignKey('projects.id'))
-
-    #tasks = relationship('Tasks', backref='task_label', lazy='joined')
-    #task_id = Column(Integer, ForeignKey('tasks.id'))
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'label': self.label,
-            'forecolor': self.forecolor,
-            'backcolor': self.backcolor,
-        }
-
-class Tasks(Base, CreationMixin):
-
-    __tablename__ = 'tasks'
-
-    id = Column(Integer, primary_key=True)
-    number = Column(Integer)
-    title = Column(Unicode)
-    contents = Column(Unicode)
-    creation_datetime = Column(DateTime)
-    due_datetime = Column(Unicode)
-
-    user_id = Column(Integer, ForeignKey('users.id'))
-    project_id = Column(Integer, ForeignKey('projects.id'))
-
-    task_label_id = Column(Integer, ForeignKey('task_labels.id'))
-
-    label = relationship('TaskLabels', backref='task', lazy='joined')
-    comments = relationship('Comments', backref='task', lazy='joined')
-    tickets = relationship('Tickets', backref='task', lazy='joined')
-
-    def to_dict(self):
-        label = None
-        if not self.label is None:
-            label = self.label.to_dict()
-        return {
-            'id': self.id,
-            'title': self.title,
-            'contents': self.contents,
-            'creation_datetime': str(self.creation_datetime).split(' ')[0],
-            'due_datetime': str(self.due_datetime).split(' ')[0],
-            'owner': self.user.to_dict(), # backref
-            'label': label,
-            'comments': [c.to_dict() for c in self.comments],
-            'tickets': [t.to_dict() for t in self.tickets],
-        }
-
-class TicketLabels(Base, CreationMixin):
-
-    __tablename__ = 'ticket_labels'
-    
-    id = Column(Integer, primary_key=True)
-    label = Column(Unicode)
-    forecolor = Column(Unicode)
-    backcolor = Column(Unicode)
-
-    project_id = Column(Integer, ForeignKey('projects.id'))
-
-    #ticket_id = Column(Integer, ForeignKey('tickets.id'))
-    tickets = relationship('Tickets', backref='ticket_label', lazy='joined')
-
-    def to_dict(self):
-        resp = {
-            'id': self.id,
-            'label': self.label,
-            'forecolor': self.forecolor,
-            'backcolor': self.backcolor,
-        }
+        resp = super(Projects, self).to_dict()
+        resp.update(
+            name = self.name,
+        )
         return resp
 
-class TicketPriorities(Base, CreationMixin):
+class TicketAssignments(Base, CreationMixin, TimeStampMixin):
 
-    __tablename__ = 'ticket_priorities'
+    __tablename__ = 'ticket_assignments'
 
-    id = Column(Integer, primary_key=True)
-    label = Column(Unicode)
-    value = Column(Integer)
-    forecolor = Column(Unicode)
-    backcolor = Column(Unicode)
+    ticket_id = Column(Integer, ForeignKey('tickets.id'), nullable=False)
+    entity_id = Column(Integer, ForeignKey('entities.id'), nullable=False)
 
-    project_id = Column(Integer, ForeignKey('projects.id'))
+class Entities(Base, CreationMixin, TimeStampMixin):
 
-    #ticket_id = Column(Integer, ForeignKey('tickets.id'))
-    tickets = relationship('Tickets', backref='ticket_priority', lazy='joined')
+    __tablename__ = 'entities'
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'label': self.label,
-            'value': self.value,
-            'forecolor': self.forecolor,
-            'backcolor': self.backcolor,
-        }
+    name = Column(UnicodeText, nullable=False)
+    description = Column(UnicodeText, nullable=False)
 
-class TicketStatuses(Base, CreationMixin):
-
-    __tablename__ = 'ticket_statuses'
-
-    id = Column(Integer, primary_key=True)
-    label = Column(Unicode)
-    description = Column(Unicode)
-    value = Column(Integer)
-
-    project_id = Column(Integer, ForeignKey('projects.id'))
-
-    tickets = relationship('Tickets', backref='ticket_status', lazy='joined')
+    tickets = relationship(
+        'Tickets',
+        secondary=TicketAssignments.__table__,
+        backref='entity'
+    )
 
     def to_dict(self):
-        return {
-            'id': self.id,
-            'label': self.label,
-            'description': self.description,
-            'value': self.value,
-        }
+        resp = super(Entities, self).to_dict()
+        resp.update(
+            name=self.name,
+            description=self.description,
+            tickets=[t.to_dict for t in self.tickets],
+        )
+        return resp
 
-class Tickets(Base, CreationMixin):
+class Tickets(Base, CreationMixin, TimeStampMixin):
 
     __tablename__ = 'tickets'
 
-    id = Column(Integer, primary_key=True)
-    number = Column(Integer)
-    title = Column(Unicode)
-    contents = Column(Unicode)
-    creation_datetime = Column(DateTime)
-    due_datetime = Column(DateTime)
-    edited = Column(Boolean)
-
-    task_id = Column(Integer, ForeignKey('tasks.id'))
-    #project_id = Column(Integer, ForeignKey('projects.id'))
-
-    owner_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    name = Column(UnicodeText, nullable=False)
+    priority = Column(UnicodeText, nullable=False)
+    label = Column(UnicodeText, nullable=True)
+    label_color = Column(UnicodeText, nullable=True)
     assignee_id = Column(Integer, ForeignKey('users.id'), nullable=True)
-
-    #owner = relationship(Users, foreign_keys=owner_id)
-    #assignee = relationship(Users, foreign_keys=assignee_id)
-
-    ticket_label_id = Column(Integer, ForeignKey('ticket_labels.id'), nullable=True)
-    ticket_priority_id = Column(Integer, ForeignKey('ticket_priorities.id'), nullable=True)
-    ticket_status_id = Column(Integer, ForeignKey('ticket_statuses.id'), nullable=True)
+    parent_ticket_id = Column(Integer, ForeignKey('tickets.id'), nullable=True)
+    #entity_id = Column(Integer, ForeignKey('entities.id'), nullable=True)
 
     def to_dict(self):
-        assignee = {}
-        if not self.assignee is None:
-            assignee = self.assignee.to_dict()
-        ticket_label = {}
-        if not self.ticket_label is None:
-            ticket_label = self.ticket_label.to_dict()
-        ticket_priority = {}
-        if not self.ticket_priority is None:
-            ticket_priority = self.ticket_priority.to_dict()
-        ticket_status = {}
-        if not self.ticket_status is None:
-            ticket_status = self.ticket_status.to_dict()
-        resp = {
-            'id': self.id,
-            'title': self.title,
-            'contents': self.contents,
-            'creation_datetime': str(self.creation_datetime).split(' ')[0],
-            'due_datetime': str(self.due_datetime).split(' ')[0],
-            'edited': self.edited,
-            'owner': self.owner.to_dict(),
-            'assignee': assignee,
-            'label': ticket_label,
-            'priority': ticket_priority,
-            'status': ticket_status,
-        }
+        resp = super(Ticket, self).to_dict()
+        resp.update(
+            name=self.name,
+            priority=self.priority,
+            label=self.label,
+            label_color=self.label_color,
+            assignee=self.assignee if self.assignee != None else {},
+        )
+        return resp
 
+class TicketActions(Base, CreationMixin, TimeStampMixin):
+
+    __tablename__ = 'ticket_comments'
+
+    action = Column(UnicodeText, nullable=False)
+    contents = Column(UnicodeText, nullable=False)
+
+    author_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+
+    def to_dict(self):
+        resp = super(TicketActions, self).to_dict()
+        resp.update(
+            action=self.action,
+            contents=self.contents,
+            author=self.author.to_dict()
+        )
         return resp
 
